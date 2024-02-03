@@ -59,9 +59,8 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
-	"sync"
-	"time"
+	"io/ioutil"
+	"os"
 )
 
 // func accumulator(increment int) func() int {
@@ -476,35 +475,422 @@ import (
 // 	}
 // }
 
-func generator(ch chan int, wg *sync.WaitGroup) {
-	defer wg.Done()
+// func generator(ch chan int, wg *sync.WaitGroup) {
+// 	defer wg.Done()
 
-	for i := 0; i < 5; i++ {
-		time.Sleep(time.Millisecond * 500)
-		ch <- rand.Int()
+// 	for i := 0; i < 5; i++ {
+// 		time.Sleep(time.Millisecond * 500)
+// 		ch <- rand.Int()
+// 	}
+// 	close(ch)
+// 	fmt.Print("generator is done")
+
+// }
+
+// func consumer(id int, sleep time.Duration, ch chan int, wg *sync.WaitGroup) {
+// 	defer wg.Done()
+// 	for task := range ch {
+// 		time.Sleep(sleep)
+// 		fmt.Printf("Consumer %d finished task %d\n", id, task)
+// 	}
+// 	fmt.Printf("Consumer %d is done\n", id)
+// }
+
+// func main() {
+
+// 	ch := make(chan int, 10)
+// 	var wg sync.WaitGroup
+// 	wg.Add(3)
+// 	go generator(ch, &wg)
+// 	go consumer(1, 400, ch, &wg)
+// 	go consumer(2, 100, ch, &wg)
+
+// 	wg.Wait()
+// }
+
+// func worker(x *int) {
+// 	for {
+// 		time.Sleep(time.Millisecond * 100)
+// 		*x += 1
+// 	}
+// }
+
+// func main() {
+// 	timer := time.NewTimer(time.Second * 2)
+// 	ticker := time.NewTicker(time.Second)
+
+// 	x := 0
+
+// 	go worker(&x)
+
+// 	for {
+// 		select {
+// 		case <-timer.C:
+// 			fmt.Println("time -> %d\n", x)
+// 		case <-ticker.C:
+// 			fmt.Printf("ticket -> %d\n", x)
+// 		}
+// 		if x >= 10 {
+// 			break
+// 		}
+// 	}
+
+// }
+
+// func reaction(t *time.Ticker) {
+// 	for {
+// 		select {
+// 		case x := <-t.C:
+// 			fmt.Println("Tick at", x)
+// 		}
+// 	}
+// }
+
+// func slowReaction(t *time.Timer) {
+// 	select {
+// 	case x := <-t.C:
+// 		fmt.Println("Tick at", x)
+
+// 	}
+// }
+
+// func main() {
+// 	quick := time.NewTicker(time.Second)
+// 	slow := time.NewTimer(time.Second * 5)
+// 	stopper := time.NewTimer(time.Second * 4)
+
+// 	go reaction(quick)
+// 	go slowReaction(slow)
+// 	<-stopper.C
+// 	quick.Stop()
+
+// 	stopped := slow.Stop()
+
+// 	fmt.Println("slow timer stopped?", stopped)
+
+// }
+
+// func setter(id int, c *int32, ctx context.Context) {
+// 	fmt.Printf("Setter %d started\n", id)
+// 	t := time.NewTicker(time.Millisecond * 10)
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			fmt.Printf("Setter %d is done\n", id)
+// 			return
+// 		case <-t.C:
+// 			atomic.AddInt32(c, 1)
+// 		}
+// 	}
+// }
+
+// func main() {
+// 	ctx, cancel := context.WithCancel(context.Background())
+
+// 	var c int32 = 0
+// 	for i := 0; i < 10; i++ {
+// 		go setter(i, &c, ctx)
+// 		// fmt.Println("Setter", i, "started")
+// 	}
+
+// 	time.Sleep(time.Second * 1)
+// 	fmt.Println("Counter:", c)
+// 	cancel()
+// 	time.Sleep(time.Second)
+// }
+
+// func work(i int, info chan int) {
+// 	t := time.Duration(i*100) * time.Millisecond
+// 	time.Sleep(t)
+// 	info <- i
+// }
+
+// func main() {
+// 	d := time.Millisecond * 1000
+
+// 	ch := make(chan int)
+
+// 	i := 0
+
+// 	for {
+// 		ctx, cancel := context.WithTimeout(context.Background(), d)
+// 		go work(i, ch)
+// 		select {
+// 		case x := <-ch:
+// 			fmt.Println("work", x, "done")
+// 		case <-ctx.Done():
+// 			fmt.Println("work timed out")
+// 		}
+
+// 		if ctx.Err() != nil {
+// 			cancel()
+// 			return
+// 		}
+// 		cancel()
+// 		i++
+
+// 	}
+// }
+
+// func accum(c *uint32, ctx context.Context) {
+// 	t := time.NewTicker(time.Millisecond * 250)
+
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			fmt.Println("Accumulator is done")
+// 			return
+// 		case <-t.C:
+// 			atomic.AddUint32(c, 1)
+// 		}
+// 	}
+// }
+
+// func main() {
+// 	d := time.Now().Add(time.Second * 3)
+// 	ctx, cancel := context.WithDeadline(context.Background(), d)
+// 	defer cancel()
+
+// 	var counter uint32 = 0
+// 	for i := 0; i < 10; i++ {
+// 		go accum(&counter, ctx)
+// 	}
+
+// 	<-ctx.Done()
+// 	fmt.Println("Counter:", counter)
+
+// }
+
+// var first int
+
+// func setter(i int, ch chan bool, once *sync.Once) {
+// 	t := rand.Uint32() % 300
+// 	time.Sleep(time.Duration(t) * time.Millisecond)
+// 	once.Do(func() {
+// 		first = i
+// 	})
+
+// 	ch <- true
+// 	fmt.Println("Setter", i, "done")
+
+// }
+
+// func main() {
+
+// 	var once sync.Once
+
+// 	ch := make(chan bool)
+
+// 	for i := 0; i < 10; i++ {
+// 		go setter(i, ch, &once)
+// 	}
+
+// 	for i := 0; i < 10; i++ {
+// 		<-ch
+// 	}
+// 	fmt.Println("First:", first)
+
+// }
+
+// func writer(x map[int]int, factor int, m *sync.Mutex) {
+// 	i := 1
+
+// 	for {
+// 		time.Sleep(time.Second)
+// 		m.Lock()
+// 		x[i] = x[i-1] * factor
+// 		m.Unlock()
+// 		i++
+// 	}
+// }
+
+// func reader(x map[int]int, m *sync.Mutex) {
+// 	for {
+// 		time.Sleep(time.Second)
+// 		// m.Lock()
+// 		fmt.Println(x)
+// 		// m.Unlock()
+// 	}
+// }
+
+// func main() {
+// 	x := make(map[int]int)
+// 	x[0] = 1
+
+// 	var m sync.Mutex
+
+// 	go writer(x, 2, &m)
+// 	go writer(x, 3, &m)
+// 	go reader(x, &m)
+
+// 	time.Sleep(time.Second * 10)
+// 	go writer(x, 3, &m)
+
+// 	time.Sleep(time.Second * 4)
+// }
+
+// func increaser(counter *int32) {
+// 	for {
+// 		atomic.AddInt32(counter, 2)
+// 		time.Sleep(time.Millisecond * 500)
+// 	}
+// }
+
+// func decreaser(counter *int32) {
+// 	for {
+// 		atomic.AddInt32(counter, -1)
+// 		time.Sleep(time.Millisecond * 500)
+// 	}
+// }
+
+// func main() {
+// 	var counter int32 = 0
+// 	go increaser(&counter)
+// 	go decreaser(&counter)
+// 	for i := 0; i < 5; i++ {
+// 		time.Sleep(time.Millisecond * 500)
+// 		fmt.Println(atomic.LoadInt32(&counter))
+// 	}
+// 	fmt.Print(atomic.LoadInt32(&counter))
+// }
+
+// type Monitor struct {
+// 	ActiveUsers int
+// 	Requests    int
+// }
+
+// func updater(monitor atomic.Value, m *sync.Mutex) {
+// 	for {
+// 		time.Sleep(time.Millisecond * 500)
+// 		fmt.Println("Updating monitor")
+// 		m.Lock()
+// 		current := monitor.Load().(*Monitor)
+// 		current.ActiveUsers += 100
+// 		current.Requests += 1000
+// 		monitor.Store(current)
+// 		m.Unlock()
+// 	}
+// }
+
+// func observe(monitor atomic.Value) {
+// 	for {
+// 		fmt.Println("Observing monitor")
+// 		time.Sleep(time.Second)
+// 		current := monitor.Load()
+// 		fmt.Println(current)
+// 	}
+// }
+
+// func main() {
+// 	var monitor atomic.Value
+// 	monitor.Store(&Monitor{ActiveUsers: 100, Requests: 1000})
+// 	m := sync.Mutex{}
+
+// 	go updater(monitor, &m)
+// 	go observe(monitor)
+// 	time.Sleep(time.Second * 10)
+// }
+
+// type MyReader struct {
+// 	data string
+// 	from int
+// }
+
+// type MyWriter struct {
+// 	data string
+// 	size int
+// }
+
+// func (r *MyReader) Read(p []byte) (int, error) {
+// 	if p == nil {
+// 		return -1, errors.New("nil target array")
+// 	}
+// 	if len(r.data) <= 0 || r.from == len(r.data) {
+// 		return 0, io.EOF
+// 	}
+
+// 	n := len(r.data) - r.from
+// 	if len(p) < n {
+// 		n = len(p)
+// 	}
+// 	for i := 0; i < n; i++ {
+// 		b := byte(r.data[r.from])
+// 		p[i] = b
+// 		r.from++
+// 	}
+// 	if r.from == len(r.data) {
+// 		return n, io.EOF
+// 	}
+// 	return n, nil
+// }
+
+// func (mw *MyWriter) Write(p []byte) (int, error) {
+// 	if len(p) == 0 {
+// 		return 0, io.EOF
+// 	}
+// 	n := mw.size
+// 	var err error = nil
+// 	if len(p) < mw.size {
+// 		n = len(p)
+// 	} else {
+// 		err = errors.New(" p is larger than size")
+// 	}
+// 	mw.data = mw.data + string(p[0:n])
+// 	return n, err
+// }
+
+// func main() {
+// 	target := make([]byte, 5)
+// 	empty := MyReader{}
+// 	n, err := empty.Read(target)
+// 	fmt.Println(n, err, string(target))
+// 	mr := MyReader{"This is to fight with the world", 4}
+// 	mw := MyWriter{"hellow world", 5}
+// 	_, errs := mw.Write(target)
+// 	if errs != nil {
+// 		fmt.Println(errs)
+// 	}
+// 	n, err = mr.Read(target)
+// 	for err == nil {
+// 		fmt.Println(n, err, string(target))
+// 		n, err = mr.Read(target)
+// 	}
+// 	fmt.Println(n, err, string(target))
+
+// }
+
+// func main() {
+// 	msg := "Save the world with go"
+// 	filePath := "/tmp/msg"
+
+// 	err := ioutil.WriteFile(filePath, []byte(msg), 0644)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	read, err := ioutil.ReadFile(filePath)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	fmt.Printf("File content: %s\n", read)
+// }
+
+
+func main(){
+	filePath := "/tmp/msg"
+
+	msg := []string{
+		"Rule","the","world"
 	}
-	close(ch)
-	fmt.Print("generator is done")
 
-}
-
-func consumer(id int, sleep time.Duration, ch chan int, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for task := range ch {
-		time.Sleep(sleep)
-		fmt.Printf("Consumer %d finished task %d\n", id, task)
+	f,err := os.Create(filePath)
+	if err != nil{
+		panic(err)
 	}
-	fmt.Printf("Consumer %d is done\n", id)
-}
 
-func main() {
+	defer f.Close()
 
-	ch := make(chan int, 10)
-	var wg sync.WaitGroup
-	wg.Add(3)
-	go generator(ch, &wg)
-	go consumer(1, 400, ch, &wg)
-	go consumer(2, 100, ch, &wg)
-
-	wg.Wait()
+	for _,s := range msg{
+		f.WriteString()
+	}
 }
